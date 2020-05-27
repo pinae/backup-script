@@ -14,10 +14,10 @@ def get_backup_time_from_dirname(dirname: str) -> Optional[datetime]:
     if matches is None:
         return None
     return datetime(year=int(matches.groupdict()['year']),
-                                   month=int(matches.groupdict()['month']),
-                                   day=int(matches.groupdict()['day']),
-                                   hour=int(matches.groupdict()['hour']),
-                                   minute=int(matches.groupdict()['minute']))
+                    month=int(matches.groupdict()['month']),
+                    day=int(matches.groupdict()['day']),
+                    hour=int(matches.groupdict()['hour']),
+                    minute=int(matches.groupdict()['minute']))
 
 
 def find_last_backup_dir(backup_base_dir: str):
@@ -84,14 +84,22 @@ def keep_one_per_year(backup_base_dir: str, after_days: int = 730):
     keep_one_per(backup_base_dir, timedelta(days=after_days), check_same_year)
 
 
-def clean_old_backups(backup_base_dir):
+def clean_old_backups(backup_base_dir: str):
     keep_one_per_day(backup_base_dir, 2)
     keep_one_per_month(backup_base_dir, 100)
     keep_one_per_year(backup_base_dir, 730)
     keep_one_per_week(backup_base_dir, 20)
 
 
-def backup(remote="user@serverHostname:/backup/directory", dest_dir="../backup-dir"):
+def check_remote_is_online(remote: str) -> bool:
+    return call(['ssh', remote.split(':')[0], 'echo', '"' + remote.split(':')[0] + ' is online."']) == 0
+
+
+def backup(remote: str = "user@serverHostname:/backup/directory",
+           dest_dir: str = "../backup-dir"):
+    if not check_remote_is_online(remote):
+        print("The remote server {} is unreachable. Skipping backup.".format(remote.split(':')[0]))
+        return
     now = datetime.now()
     backup_dir = "{:04d}-{:02d}-{:02d}_{:02d}:{:02d}".format(now.year, now.month, now.day, now.hour, now.minute)
     if path.isdir(path.join(dest_dir, backup_dir)):
